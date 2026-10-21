@@ -150,22 +150,18 @@ public static class OnceExtensions
 }
 ```
 
----
-
 ## 設計上の重要判断 (Design Decisions)
 
 1. 型構造（struct ではなく sealed class の採用）
    - C# の値型（struct）は代入や引数渡し時に暗黙のメモリコピーが発生するため、状態フラグが複製されて「Once保証」が容易に破綻します。安全性を担保するため `sealed class` が必須となります。
    - パフォーマンス面でも、`WriteOnce` は長期生存（Gen 2常駐）、`ReadOnce` は超軽量（Gen 0ですぐ回収）のため、GC負荷は無視できるレベルに抑えられます。
-1. スレッドセーフ（ロックフリー設計）
+2. スレッドセーフ（ロックフリー設計）
    - 同期ロック（`lock` / `Monitor`）によるオーバーヘッドを避けるため、`Interlocked.CompareExchange` によるアトミックな状態遷移と、`Volatile` によるメモリバリア（命令再並べ替えの防止）を採用します。
-
----
 
 ## テスト・検証要件 (Testing Requirements)
 
 - プロジェクト構成: `<ProjectName>/Test/<ProjectName>.Tests.csproj` 配下にテストプロジェクトを配置。
 - テスト検証観点:
   1. 正常系 (Happy Path): 単一スレッドでの確実な値設定・取得。
-  1. 境界値・再呼び出し: 2回目以降の `TrySet` / `TryGet` が確実に `false` を返し、内部状態が破壊されないこと。
-  1. マルチスレッド競合 (Race Condition): `Parallel.For` やマルチタスク並行実行時に、複数スレッドから同時に `TrySet` / `TryGet` が呼ばれても、成功するスレッドが厳密に1つだけであること。
+  2. 境界値・再呼び出し: 2回目以降の `TrySet` / `TryGet` が確実に `false` を返し、内部状態が破壊されないこと。
+  3. マルチスレッド競合 (Race Condition): `Parallel.For` やマルチタスク並行実行時に、複数スレッドから同時に `TrySet` / `TryGet` が呼ばれても、成功するスレッドが厳密に1つだけであること。
