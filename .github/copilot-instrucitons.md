@@ -26,14 +26,17 @@
 
 ## Project Structure & Testing Standards
 
-- Test framework: xUnit.
-- Always isolate unit tests into a dedicated test project rather than mixing them into the production project.
-- Locate the test project under a `Test` (or `Tests`) subfolder relative to the target project being tested (e.g., `<ProjectName>/Test/<ProjectName>.Tests.csproj`).
-- Design tests using the Arrange-Act-Assert (AAA) pattern.
-- Always include edge cases:
-  - Empty, null, and whitespace inputs
-  - Boundary values and overflow conditions
-  - Concurrent access scenarios for thread-safe components
+- Root Layout:
+  - Solution files (`*.sln` or `*.slnx`) reside at the repository root.
+  - Production source code resides under `src/<ProjectName>/`.
+  - Test projects reside under `tests/<ProjectName>.Tests/` (do NOT nest test folders inside production project directories).
+- Testing Standards:
+  - Framework: xUnit.
+  - Design tests using the Arrange-Act-Assert (AAA) pattern.
+  - Always include edge cases:
+    - Empty, null, and whitespace inputs
+    - Boundary values and overflow conditions
+    - Concurrent access scenarios for thread-safe components
 
 ## Documentation
 
