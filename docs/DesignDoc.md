@@ -110,12 +110,27 @@ public sealed class ReadOnce<T>
 ```csharp
 namespace OnceTypeLib;
 
+public enum WriteOnceReadOnceState
+{
+    /// <summary>値が未セットです。</summary>
+    Empty = 0,
+
+    /// <summary>値がセット済みで、未消費です。</summary>
+    Ready = 1,
+
+    /// <summary>値が消費済みです。</summary>
+    Consumed = 2,
+}
+
 public sealed class WriteOnceReadOnce<T>
 {
     // 初期値なしで生成
     public WriteOnceReadOnce();
 
-    /// <summary>値がセット済み、かつ未消費であるかどうかを取得します。</summary>
+    /// <summary>現在の状態を取得します。TrySet による書き込み中は Empty として報告されます。</summary>
+    public WriteOnceReadOnceState State { get; }
+
+    /// <summary>値がセット済み、かつ未消費であるかどうかを取得します（State == Ready と等価）。</summary>
     public bool HasValue { get; }
 
     /// <summary>値を1度だけセットします。セット済みまたは消費済みの場合は false を返します。</summary>
@@ -127,6 +142,9 @@ public sealed class WriteOnceReadOnce<T>
 ```
 
 - 内部ステートマシン: `0: Empty` ──(TrySet 成功時)──> `1: Ready` ──(TryGet 成功時)──> `2: Consumed`
+  - TrySet: CAS で `Empty -> Writing`（内部状態、値 3）に遷移できたスレッドのみが値を書き込み、`Volatile.Write` で `Ready` を公開する。
+  - TryGet: CAS で `Ready -> Consumed` に遷移できたスレッドのみが値を取得し、内部フィールドを `default` でクリアする。
+  - `Writing` は公開 enum に含めない内部状態であり、`State` プロパティでは `Empty` として報告される（下記「設計上の重要判断」3 を参照）。
 
 ### `OnceExtensions`（厳格モード用ヘルパー）
 
@@ -157,6 +175,17 @@ public static class OnceExtensions
    - パフォーマンス面でも、`WriteOnce` は長期生存（Gen 2常駐）、`ReadOnce` は超軽量（Gen 0ですぐ回収）のため、GC負荷は無視できるレベルに抑えられます。
 2. スレッドセーフ（ロックフリー設計）
    - 同期ロック（`lock` / `Monitor`）によるオーバーヘッドを避けるため、`Interlocked.CompareExchange` によるアトミックな状態遷移と、`Volatile` によるメモリバリア（命令再並べ替えの防止）を採用します。
+
+3. 書き込み中状態（Writing）と `WriteOnceReadOnceState` の扱い
+   - `WriteOnce<T>` / `WriteOnceReadOnce<T>` の `TrySet` は、値の書き込み完了前に `Ready` が公開されて未初期化の値を読まれることを防ぐため、`Empty -> Writing -> Ready` の2段階で遷移する。`Writing` は内部状態であり公開しない。
+   - `WriteOnceReadOnceState`（`Empty = 0` / `Ready = 1` / `Consumed = 2`）は公開用の状態であり、`Writing` 中の `State` は `Empty` として報告される。
+   - 既知のリスク（トレードオフ）:
+     - `TrySet` の書き込み中は、実際には他スレッドが `TrySet` に失敗する（`false`）にもかかわらず、`State` は `Empty` を返す。つまり `State == Empty` は「`TrySet` が必ず成功する」ことを意味しない。`State` はあくまで観測時点のスナップショットであり、判定後の `TrySet` / `TryGet` の成否を保証しない。
+     - `Writing` の継続時間は通常 `_value = value` の代入のみで、参照型や小さな値型ではほぼ 0 とみなせる。ただし `T` が巨大な構造体の場合はコピーコストに比例して長くなる。また、書き込みスレッドがこの間にプリエンプトされると、`T` のサイズに関わらず OS のスケジューリング遅延分だけ延びる。
+   - 採用しなかった代替案:
+     - `State` で `Writing` の間スピン待ちして `Ready` を返す案: `State` / `HasValue` がブロッキングになりロックフリー原則から外れるため不採用。
+     - `Writing` を公開 enum に含める案: 公開 API が複雑になるため、シンプルさを優先して不採用。
+   - 利用者向けには、README 等でこのリスクを明記する。
 
 ## テスト・検証要件 (Testing Requirements)
 
