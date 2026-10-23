@@ -26,6 +26,14 @@ public class ReadOnceTests
 	[Fact]
 	public void TryGet_AfterConsumption_ReturnsFalseAndDefault()
 	{
+		var once = new ReadOnce<int>(42);
+		Assert.True(once.TryGet(out _));
+
+		Assert.False(once.TryGet(out int firstValue));
+		Assert.Equal(default, firstValue);
+
+		Assert.False(once.TryGet(out int secondValue));
+		Assert.Equal(default, secondValue);
 	}
 
 	/// <summary>Verifies that a null reference value can be read and consumed.</summary>
