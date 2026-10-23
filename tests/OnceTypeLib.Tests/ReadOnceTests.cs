@@ -70,6 +70,11 @@ public class ReadOnceTests
 	[Fact]
 	public void TryGet_ReferenceType_ReturnsSameInstance()
 	{
+		var instance = new object();
+		var once = new ReadOnce<object>(instance);
+
+		Assert.True(once.TryGet(out object? value));
+		Assert.Same(instance, value);
 	}
 
 	/// <summary>Verifies that exactly one concurrent read succeeds.</summary>
