@@ -40,6 +40,15 @@ public class ReadOnceTests
 	[Fact]
 	public void TryGet_NullValue_IsConsumed()
 	{
+		var once = new ReadOnce<string?>(null);
+
+		Assert.True(once.HasValue);
+		Assert.True(once.TryGet(out string? value));
+		Assert.Null(value);
+        
+		Assert.False(once.HasValue);
+		Assert.False(once.TryGet(out string? afterConsumption));
+		Assert.Null(afterConsumption);
 	}
 
 	/// <summary>Verifies that a default value-type value can be read and consumed.</summary>
