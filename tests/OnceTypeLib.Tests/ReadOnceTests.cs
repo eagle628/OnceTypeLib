@@ -15,6 +15,11 @@ public class ReadOnceTests
 	[Fact]
 	public void TryGet_FirstCallReturnsValueAndConsumesIt()
 	{
+		var once = new ReadOnce<int>(42);
+
+		Assert.True(once.TryGet(out int value));
+		Assert.Equal(42, value);
+		Assert.False(once.HasValue);
 	}
 
 	/// <summary>Verifies that reads after consumption fail and return the default value.</summary>
