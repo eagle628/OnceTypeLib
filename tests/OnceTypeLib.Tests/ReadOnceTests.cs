@@ -55,6 +55,15 @@ public class ReadOnceTests
 	[Fact]
 	public void TryGet_DefaultValue_IsConsumed()
 	{
+		var once = new ReadOnce<int>(default);
+
+		Assert.True(once.HasValue);
+		Assert.True(once.TryGet(out int value));
+		Assert.Equal(default, value);
+        
+		Assert.False(once.HasValue);
+		Assert.False(once.TryGet(out int afterConsumption));
+		Assert.Equal(default, afterConsumption);
 	}
 
 	/// <summary>Verifies that reading a reference-type value returns the same instance.</summary>
