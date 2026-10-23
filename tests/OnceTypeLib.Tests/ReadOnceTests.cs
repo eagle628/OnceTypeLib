@@ -78,8 +78,37 @@ public class ReadOnceTests
 	}
 
 	/// <summary>Verifies that exactly one concurrent read succeeds.</summary>
-	[Fact]
-	public void TryGet_ConcurrentCalls_ExactlyOneSucceeds()
+	[Fact(Timeout = 10000)]
+	public async Task TryGet_ConcurrentCalls_ExactlyOneSucceeds()
 	{
+		const int Concurrency = 16;
+		var once = new ReadOnce<int>(42);
+		var successes = new bool[Concurrency];
+		var values = new int[Concurrency];
+		using var readySignal = new CountdownEvent(Concurrency);
+		var startSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		Task[] readers = Enumerable.Range(0, Concurrency)
+			.Select(worker => Task.Run(async () =>
+			{
+				_ = readySignal.Signal();
+				await startSignal.Task;
+
+				successes[worker] = once.TryGet(out int value);
+				values[worker] = value;
+			}))
+			.ToArray();
+
+		readySignal.Wait();
+		startSignal.SetResult();
+		await Task.WhenAll(readers);
+
+		Assert.Equal(1, successes.Count(success => success));
+		for (int worker = 0; worker < Concurrency; worker++)
+		{
+			Assert.Equal(successes[worker] ? 42 : default, values[worker]);
+		}
+
+		Assert.False(once.HasValue);
 	}
 }
