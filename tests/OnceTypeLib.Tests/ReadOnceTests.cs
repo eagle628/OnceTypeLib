@@ -6,6 +6,9 @@ public class ReadOnceTests
 	[Fact]
 	public void NewInstance_HasValue()
 	{
+		var once = new ReadOnce<int>(42);
+
+		Assert.True(once.HasValue);
 	}
 
 	/// <summary>Verifies that the first read returns the initial value and consumes it.</summary>
