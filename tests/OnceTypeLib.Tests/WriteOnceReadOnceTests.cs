@@ -70,6 +70,13 @@ public class WriteOnceReadOnceTests
     [Fact]
     public void TryGet_AfterConsumption_ReturnsFalseAndDefault()
     {
+        var once = new WriteOnceReadOnce<int>();
+        _ = once.TrySet(42);
+        Assert.True(once.TryGet(out _));
+
+        Assert.False(once.TryGet(out int value));
+        Assert.Equal(default, value);
+        Assert.Equal(WriteOnceReadOnceState.Consumed, once.State);
     }
 
     /// <summary>Verifies that a null reference value can be set and retrieved.</summary>
