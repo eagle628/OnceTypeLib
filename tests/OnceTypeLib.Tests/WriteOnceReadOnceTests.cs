@@ -57,6 +57,13 @@ public class WriteOnceReadOnceTests
     [Fact]
     public void TrySet_WhenConsumed_ReturnsFalse()
     {
+        var once = new WriteOnceReadOnce<int>();
+        _ = once.TrySet(1);
+        Assert.True(once.TryGet(out _));
+
+        Assert.False(once.TrySet(2));
+        Assert.Equal(WriteOnceReadOnceState.Consumed, once.State);
+        Assert.False(once.HasValue);
     }
 
     /// <summary>Verifies that reading a consumed value fails and returns the default value.</summary>
