@@ -96,6 +96,13 @@ public class WriteOnceReadOnceTests
     [Fact]
     public void TrySet_DefaultValueType_CanBeRetrieved()
     {
+        var once = new WriteOnceReadOnce<int>();
+
+        Assert.True(once.TrySet(default));
+        Assert.True(once.HasValue);
+        Assert.True(once.TryGet(out int value));
+        Assert.Equal(default, value);
+        Assert.Equal(WriteOnceReadOnceState.Consumed, once.State);
     }
 
     /// <summary>Verifies that retrieving a reference-type value returns the same instance.</summary>
