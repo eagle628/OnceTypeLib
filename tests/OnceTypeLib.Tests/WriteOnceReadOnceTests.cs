@@ -193,6 +193,58 @@ public class WriteOnceReadOnceTests
     [Fact(Timeout = 10000)]
     public async Task TryGet_ConcurrentWithTrySet_ReturnsOnlyPublishedValue()
     {
+        const int ReaderCount = 16;
+        const int Iterations = 200;
+
+        for (int iteration = 0; iteration < Iterations; iteration++)
+        {
+            var once = new WriteOnceReadOnce<string>();
+            int successCount = 0;
+            int invalidReads = 0;
+            bool setSucceeded = false;
+            bool consumed = false;
+            using var readySignal = new CountdownEvent(ReaderCount + 1);
+            using var startSignal = new ManualResetEventSlim();
+
+            Task writer = Task.Run(() =>
+            {
+                _ = readySignal.Signal();
+                startSignal.Wait();
+                Volatile.Write(ref setSucceeded, once.TrySet("ready"));
+            });
+
+            // Readers keep reading until the value is consumed, so a read always overlaps or follows the write.
+            Task[] readers = Enumerable.Range(0, ReaderCount)
+                .Select(readerIndex => Task.Run(() =>
+                {
+                    _ = readySignal.Signal();
+                    startSignal.Wait();
+
+                    while (!Volatile.Read(ref consumed))
+                    {
+                        if (once.TryGet(out string? value))
+                        {
+                            _ = Interlocked.Increment(ref successCount);
+                            if (value != "ready")
+                            {
+                                _ = Interlocked.Increment(ref invalidReads);
+                            }
+
+                            Volatile.Write(ref consumed, true);
+                        }
+                    }
+                }))
+                .ToArray();
+
+            readySignal.Wait();
+            startSignal.Set();
+            await Task.WhenAll(readers.Append(writer));
+
+            Assert.True(setSucceeded);
+            Assert.Equal(0, invalidReads);
+            Assert.Equal(1, successCount);
+            Assert.Equal(WriteOnceReadOnceState.Consumed, once.State);
+        }
     }
 
     private static async Task RunConcurrentlyAsync(int concurrency, Action<int> workerAction)
