@@ -109,6 +109,13 @@ public class WriteOnceReadOnceTests
     [Fact]
     public void TryGet_ReferenceType_ReturnsSameInstance()
     {
+        var once = new WriteOnceReadOnce<object>();
+        var obj = new object();
+
+        Assert.True(once.TrySet(obj));
+        Assert.True(once.TryGet(out object? retrieved));
+        Assert.Same(obj, retrieved);
+        Assert.Equal(WriteOnceReadOnceState.Consumed, once.State);
     }
 
     /// <summary>Verifies that exactly one concurrent set attempt succeeds.</summary>
