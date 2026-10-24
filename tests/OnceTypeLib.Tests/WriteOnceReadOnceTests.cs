@@ -30,6 +30,13 @@ public class WriteOnceReadOnceTests
     [Fact]
     public void TryGet_AfterTrySet_ReturnsValueAndConsumesIt()
     {
+        var once = new WriteOnceReadOnce<int>();
+        _ = once.TrySet(42);
+
+        Assert.True(once.TryGet(out int value));
+        Assert.Equal(42, value);
+        Assert.Equal(WriteOnceReadOnceState.Consumed, once.State);
+        Assert.False(once.HasValue);
     }
 
     /// <summary>Verifies that setting a value when ready fails without replacing the original value.</summary>
