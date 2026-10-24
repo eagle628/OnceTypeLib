@@ -19,6 +19,11 @@ public class WriteOnceReadOnceTests
     [Fact]
     public void TrySet_FirstCall_SucceedsAndSetsReadyState()
     {
+        var once = new WriteOnceReadOnce<int>();
+
+        Assert.True(once.TrySet(42));
+        Assert.Equal(WriteOnceReadOnceState.Ready, once.State);
+        Assert.True(once.HasValue);
     }
 
     /// <summary>Verifies that reading a set value returns it and consumes it.</summary>
