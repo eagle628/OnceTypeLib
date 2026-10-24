@@ -122,6 +122,31 @@ public class WriteOnceReadOnceTests
     [Fact(Timeout = 10000)]
     public async Task TrySet_ConcurrentCalls_ExactlyOneSucceeds()
     {
+        const int Iterations = 1000;
+        const int Concurrency = 16;
+        var onces = Enumerable.Range(0, Iterations).Select(_ => new WriteOnceReadOnce<int>()).ToArray();
+        var successCounts = new int[Iterations];
+        var winners = new int[Iterations];
+
+        await RunConcurrentlyAsync(Concurrency, worker =>
+        {
+            for (int i = 0; i < Iterations; i++)
+            {
+                if (onces[i].TrySet(worker))
+                {
+                    _ = Interlocked.Increment(ref successCounts[i]);
+                    Volatile.Write(ref winners[i], worker);
+                }
+            }
+        });
+
+        for (int i = 0; i < Iterations; i++)
+        {
+            Assert.Equal(1, successCounts[i]);
+            Assert.Equal(WriteOnceReadOnceState.Ready, onces[i].State);
+            Assert.True(onces[i].TryGet(out int value));
+            Assert.Equal(winners[i], value);
+        }
     }
 
     /// <summary>Verifies that exactly one concurrent read attempt succeeds.</summary>
@@ -134,5 +159,42 @@ public class WriteOnceReadOnceTests
     [Fact(Timeout = 10000)]
     public async Task TryGet_ConcurrentWithTrySet_ReturnsOnlyPublishedValue()
     {
+    }
+
+    private static async Task RunConcurrentlyAsync(int concurrency, Action<int> workerAction)
+    {
+        var exceptions = new Exception?[concurrency];
+        var workers = new Task[concurrency];
+        using var readySignal = new CountdownEvent(concurrency);
+        var startSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        for (int worker = 0; worker < concurrency; worker++)
+        {
+            int workerIndex = worker;
+            workers[worker] = Task.Run(async () =>
+            {
+                _ = readySignal.Signal();
+                await startSignal.Task;
+
+                try
+                {
+                    workerAction(workerIndex);
+                }
+                catch (Exception exception)
+                {
+                    exceptions[workerIndex] = exception;
+                }
+            });
+        }
+
+        readySignal.Wait();
+        startSignal.SetResult();
+        await Task.WhenAll(workers);
+
+        Exception[] workerExceptions = exceptions.OfType<Exception>().ToArray();
+        if (workerExceptions.Length > 0)
+        {
+            throw new AggregateException("A concurrent test worker failed.", workerExceptions);
+        }
     }
 }
