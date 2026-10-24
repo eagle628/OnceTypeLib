@@ -6,6 +6,13 @@ public class WriteOnceReadOnceTests
     [Fact]
     public void NewInstance_HasEmptyStateAndCannotBeRead()
     {
+        var once = new WriteOnceReadOnce<int>();
+
+        Assert.Equal(WriteOnceReadOnceState.Empty, once.State);
+        Assert.False(once.HasValue);
+        Assert.False(once.TryGet(out int value));
+        Assert.Equal(default, value);
+        Assert.Equal(WriteOnceReadOnceState.Empty, once.State);
     }
 
     /// <summary>Verifies that the first set succeeds and changes the state to ready.</summary>
