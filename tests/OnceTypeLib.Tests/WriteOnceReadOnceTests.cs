@@ -83,6 +83,13 @@ public class WriteOnceReadOnceTests
     [Fact]
     public void TrySet_NullReferenceValue_CanBeRetrieved()
     {
+        var once = new WriteOnceReadOnce<string?>();
+
+        Assert.True(once.TrySet(null));
+        Assert.True(once.HasValue);
+        Assert.True(once.TryGet(out string? value));
+        Assert.Null(value);
+        Assert.Equal(WriteOnceReadOnceState.Consumed, once.State);
     }
 
     /// <summary>Verifies that a default value-type value can be set and retrieved.</summary>
