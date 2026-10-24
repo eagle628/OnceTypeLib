@@ -153,6 +153,40 @@ public class WriteOnceReadOnceTests
     [Fact(Timeout = 10000)]
     public async Task TryGet_ConcurrentCalls_ExactlyOneSucceeds()
     {
+        const int Iterations = 1000;
+        const int Concurrency = 16;
+        var onces = Enumerable.Range(0, Iterations).Select(_ => new WriteOnceReadOnce<int>()).ToArray();
+        foreach (var once in onces)
+        {
+            Assert.True(once.TrySet(42));
+        }
+
+        var successCounts = new int[Iterations];
+        var invalidResults = 0;
+
+        await RunConcurrentlyAsync(Concurrency, _ =>
+        {
+            for (int i = 0; i < Iterations; i++)
+            {
+                bool success = onces[i].TryGet(out int value);
+                if (success)
+                {
+                    _ = Interlocked.Increment(ref successCounts[i]);
+                }
+
+                if (value != (success ? 42 : default))
+                {
+                    _ = Interlocked.Increment(ref invalidResults);
+                }
+            }
+        });
+
+        Assert.Equal(0, invalidResults);
+        for (int i = 0; i < Iterations; i++)
+        {
+            Assert.Equal(1, successCounts[i]);
+            Assert.Equal(WriteOnceReadOnceState.Consumed, onces[i].State);
+        }
     }
 
     /// <summary>Verifies that a read concurrent with setting returns only the published value.</summary>
