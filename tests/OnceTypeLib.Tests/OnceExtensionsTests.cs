@@ -30,4 +30,65 @@ public class OnceExtensionsTests
 
 		_ = Assert.Throws<InvalidOperationException>(() => once.GetOrThrow());
 	}
+
+	/// <summary>Verifies that SetOrThrow on a WriteOnce throws ArgumentNullException when the source is null.</summary>
+	[Fact]
+	public void WriteOnce_SetOrThrow_NullSource_ThrowsArgumentNullException()
+	{
+		WriteOnce<int> once = null!;
+
+		_ = Assert.Throws<ArgumentNullException>(() => once.SetOrThrow(42));
+	}
+
+	/// <summary>Verifies that SetOrThrow on an empty WriteOnce stores the value.</summary>
+	[Fact]
+	public void WriteOnce_SetOrThrow_FirstCallStoresValue()
+	{
+		var once = new WriteOnce<int>();
+
+		once.SetOrThrow(42);
+
+		Assert.True(once.HasValue);
+		Assert.Equal(42, once.GetOrThrow());
+	}
+
+	/// <summary>Verifies that SetOrThrow on a WriteOnce that already has a value throws and keeps the first value.</summary>
+	[Fact]
+	public void WriteOnce_SetOrThrow_AlreadySet_ThrowsInvalidOperationException()
+	{
+		var once = new WriteOnce<int>();
+		once.SetOrThrow(42);
+
+		_ = Assert.Throws<InvalidOperationException>(() => once.SetOrThrow(99));
+		Assert.Equal(42, once.GetOrThrow());
+	}
+
+	/// <summary>Verifies that GetOrThrow on a WriteOnce throws ArgumentNullException when the source is null.</summary>
+	[Fact]
+	public void WriteOnce_GetOrThrow_NullSource_ThrowsArgumentNullException()
+	{
+		WriteOnce<int> once = null!;
+
+		_ = Assert.Throws<ArgumentNullException>(() => once.GetOrThrow());
+	}
+
+	/// <summary>Verifies that GetOrThrow on a WriteOnce returns the value and can be called repeatedly.</summary>
+	[Fact]
+	public void WriteOnce_GetOrThrow_AfterSet_ReturnsValueRepeatedly()
+	{
+		var once = new WriteOnce<int>();
+		once.SetOrThrow(42);
+
+		Assert.Equal(42, once.GetOrThrow());
+		Assert.Equal(42, once.GetOrThrow());
+	}
+
+	/// <summary>Verifies that GetOrThrow on an unset WriteOnce throws InvalidOperationException.</summary>
+	[Fact]
+	public void WriteOnce_GetOrThrow_NotSet_ThrowsInvalidOperationException()
+	{
+		var once = new WriteOnce<int>();
+
+		_ = Assert.Throws<InvalidOperationException>(() => once.GetOrThrow());
+	}
 }
