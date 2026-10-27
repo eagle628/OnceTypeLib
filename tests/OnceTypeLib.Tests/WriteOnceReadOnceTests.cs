@@ -1,4 +1,4 @@
-namespace OnceTypeLib.Tests;
+﻿namespace OnceTypeLib.Tests;
 
 public class WriteOnceReadOnceTests
 {
@@ -238,7 +238,7 @@ public class WriteOnceReadOnceTests
 
             readySignal.Wait();
             startSignal.Set();
-            await Task.WhenAll(readers.Append(writer));
+            await Task.WhenAll(readers.Concat(new[] { writer }));
 
             Assert.True(setSucceeded);
             Assert.Equal(0, invalidReads);
@@ -252,7 +252,7 @@ public class WriteOnceReadOnceTests
         var exceptions = new Exception?[concurrency];
         var workers = new Task[concurrency];
         using var readySignal = new CountdownEvent(concurrency);
-        var startSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var startSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         for (int worker = 0; worker < concurrency; worker++)
         {
@@ -260,7 +260,7 @@ public class WriteOnceReadOnceTests
             workers[worker] = Task.Run(async () =>
             {
                 _ = readySignal.Signal();
-                await startSignal.Task;
+                _ = await startSignal.Task;
 
                 try
                 {
@@ -274,7 +274,7 @@ public class WriteOnceReadOnceTests
         }
 
         readySignal.Wait();
-        startSignal.SetResult();
+        startSignal.SetResult(true);
         await Task.WhenAll(workers);
 
         Exception[] workerExceptions = exceptions.OfType<Exception>().ToArray();
