@@ -186,6 +186,13 @@ public static class OnceExtensions
      - `State` で `Writing` の間スピン待ちして `Ready` を返す案: `State` / `HasValue` がブロッキングになりロックフリー原則から外れるため不採用。
      - `Writing` を公開 enum に含める案: 公開 API が複雑になるため、シンプルさを優先して不採用。
    - 利用者向けには、README 等でこのリスクを明記する。
+4. 厳格モード（`OrThrow`）の例外設計
+   - `SetOrThrow` / `GetOrThrow` は「ここでは必ず成功する」という不変条件の表明であり、失敗はプログラムのバグを意味する。そのため例外は catch して回復する対象ではなく、`ArgumentNullException` と同様に最上位でログ出力して終了する扱いを想定する。回復したい場合は `TrySet` / `TryGet` を使う。
+   - 未設定と消費済みはどちらも `InvalidOperationException` とし、区別はメッセージのみで行う。診断時に原因が読めれば足り、catch して分岐する利用者は想定しないためである。
+   - 採用しなかった代替案:
+     - 消費済み専用の例外型（`InvalidOperationException` の派生クラス等）を設ける案: 分岐する利用者がおらず、公開 API が増えるだけでシンプルさを失うため不採用。
+     - 並行実行中の書き込み途中（`Writing`）を `GetOrThrow` で別メッセージにする案: 内部状態を例外処理に漏らす複雑さに見合わないため不採用。`Writing` 中の失敗は「未設定」として報告する。
+   - 前提: `OrThrow` を使う箇所では、他スレッドとの同期（書き込み完了の happens-before）が済んでいることを呼び出し側が保証する。並行して競合しうる箇所では `Try` 系を使う。
 
 ## テスト・検証要件 (Testing Requirements)
 
