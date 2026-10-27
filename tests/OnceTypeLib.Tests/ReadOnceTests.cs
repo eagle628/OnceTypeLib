@@ -1,4 +1,4 @@
-namespace OnceTypeLib.Tests;
+﻿namespace OnceTypeLib.Tests;
 
 public class ReadOnceTests
 {
@@ -86,13 +86,13 @@ public class ReadOnceTests
 		var successes = new bool[Concurrency];
 		var values = new int[Concurrency];
 		using var readySignal = new CountdownEvent(Concurrency);
-		var startSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var startSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		Task[] readers = Enumerable.Range(0, Concurrency)
 			.Select(worker => Task.Run(async () =>
 			{
 				_ = readySignal.Signal();
-				await startSignal.Task;
+				_ = await startSignal.Task;
 
 				successes[worker] = once.TryGet(out int value);
 				values[worker] = value;
@@ -100,7 +100,7 @@ public class ReadOnceTests
 			.ToArray();
 
 		readySignal.Wait();
-		startSignal.SetResult();
+		startSignal.SetResult(true);
 		await Task.WhenAll(readers);
 
 		Assert.Equal(1, successes.Count(success => success));
