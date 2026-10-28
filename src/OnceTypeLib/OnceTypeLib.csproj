@@ -6,10 +6,32 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <PackageId>OnceTypeLib</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>eagle628</Authors>
+    <Copyright>Copyright (c) 2026 eagle628</Copyright>
+    <Description>Lock-free C# types that express one-time access contracts: WriteOnce&lt;T&gt;, ReadOnce&lt;T&gt; and WriteOnceReadOnce&lt;T&gt;, with an optional throwing strict mode.</Description>
+    <PackageTags>once;write-once;read-once;lock-free;thread-safe;immutable;concurrency</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/eagle628/OnceTypeLib</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/eagle628/OnceTypeLib</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EnablePackageValidation>true</EnablePackageValidation>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.403" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>
