@@ -226,8 +226,11 @@ public class WriteOnceReadOnceTests
                     _ = readySignal.Signal();
                     startSignal.Wait();
 
+                    // Yield while spinning so the writer can run on machines with fewer cores than readers.
+                    var spinner = default(SpinWait);
                     while (!Volatile.Read(ref consumed))
                     {
+                        spinner.SpinOnce();
                         if (once.TryGet(out string? value))
                         {
                             _ = Interlocked.Increment(ref successCount);
