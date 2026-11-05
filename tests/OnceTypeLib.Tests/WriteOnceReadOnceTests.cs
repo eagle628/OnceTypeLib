@@ -206,16 +206,22 @@ public class WriteOnceReadOnceTests
             using var readySignal = new CountdownEvent(ReaderCount + 1);
             using var startSignal = new ManualResetEventSlim();
 
-            Task writer = Task.Run(() =>
-            {
-                _ = readySignal.Signal();
-                startSignal.Wait();
-                Volatile.Write(ref setSucceeded, once.TrySet("ready"));
-            });
+            // Dedicated threads avoid thread pool starvation, since every worker blocks or spins.
+            Task writer = Task.Factory.StartNew(
+                () =>
+                {
+                    _ = readySignal.Signal();
+                    startSignal.Wait();
+                    Volatile.Write(ref setSucceeded, once.TrySet("ready"));
+                },
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
 
             // Readers keep reading until the value is consumed, so a read always overlaps or follows the write.
             Task[] readers = Enumerable.Range(0, ReaderCount)
-                .Select(readerIndex => Task.Run(() =>
+                .Select(readerIndex => Task.Factory.StartNew(
+                    () =>
                 {
                     _ = readySignal.Signal();
                     startSignal.Wait();
@@ -233,7 +239,10 @@ public class WriteOnceReadOnceTests
                             Volatile.Write(ref consumed, true);
                         }
                     }
-                }))
+                },
+                    CancellationToken.None,
+                    TaskCreationOptions.LongRunning,
+                    TaskScheduler.Default))
                 .ToArray();
 
             readySignal.Wait();
